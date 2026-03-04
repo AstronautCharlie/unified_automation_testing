@@ -1,6 +1,7 @@
 # This file defines some useful constants and utility functions
 
 import pandas as pd
+import os
 
 ###############
 # Sensor fields
@@ -194,7 +195,20 @@ OBJECT_ACCELEROMETERS = [
 ]
 
 #################
-# Activity fields
+# Activity Fields
+#################
+ACTIVITY_FIELDS = [
+    'Locomotion',
+    'LL_Right_Arm',
+    'LL_Right_Arm_Object',
+    'LL_Left_Arm',
+    'LL_Left_Arm_Object',
+    'ML_Both_Arms',
+    'HL_Activity'
+]
+
+#################
+# Activity Values
 #################
 LL_OBJECTS = [
     'Lazychair', 
@@ -250,5 +264,34 @@ LOCOMOTION_LABELS = [
     'Lie'
 ]
 
-def load_all_adl(): 
-    
+def load_all_adl() -> pd.DataFrame:
+    dataset_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dataset")
+    adl_files = sorted(
+        f for f in os.listdir(dataset_dir)
+        if "ADL" in f and f.endswith(".parquet")
+    )
+    dfs = []
+    for f in adl_files:
+        df = pd.read_parquet(os.path.join(dataset_dir, f))
+        stem = f.replace(".parquet", "")       # e.g. "S1-ADL1"
+        df["subject"] = stem.split("-")[0]     # e.g. "S1"
+        df["recording"] = stem                 # e.g. "S1-ADL1"
+        dfs.append(df)
+    return pd.concat(dfs, ignore_index=True)
+
+def load_all_adl_no_label() -> pd.DataFrame: 
+    dataset_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dataset")
+    adl_files = sorted(
+        f for f in os.listdir(dataset_dir)
+        if "ADL" in f and f.endswith(".parquet")
+    )
+    dfs = []
+    for f in adl_files:
+        df = pd.read_parquet(os.path.join(dataset_dir, f))
+        stem = f.replace(".parquet", "")       # e.g. "S1-ADL1"
+        df["subject"] = stem.split("-")[0]     # e.g. "S1"
+        df["recording"] = stem                 # e.g. "S1-ADL1"
+        # drop activity columns
+        df = df.drop(columns=ACTIVITY_FIELDS)
+        dfs.append(df)
+    return pd.concat(dfs, ignore_index=True)

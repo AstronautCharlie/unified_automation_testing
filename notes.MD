@@ -2,12 +2,12 @@ Data preparation steps:
 1. Converted .dat files to .parquet files (`convert_to_parquet.py`)
 2. Renamed duplicate `accX` columns ending with `accX_2` to `accY` and `accX_3` to `accZ` (`rename_acc_cols.py`)
 
-Experimental setup: 
+# Experimental setup: 
 * Claude Code version 2.1.59
 * Sonnet 4.6
 * Always cleared context between runs to avoid contamination
 
-Test prompts and results
+# Test prompts and results
 * Prompt 1: "Read through all of the ADL.parquet files and find relationships between the low-level sensor data and the activity columns ("Locomotion", "HL_Activity", "LL_Left_Arm", "LL_Left_Arm_Object", "LL_Right_Arm", "LL_Right_Arm_Object", "ML_Both_Arms")"
     * Prompt is intended to create a floor of performance - no helpful info about what kinds of relationships are to be looked for, or what the sensor data tracks.
     * Resulting file is `analyze_adl.py` which does the following:
@@ -83,6 +83,33 @@ Test prompts and results
 * Prompt 7: Same goal as Prompt 5, but further specified that the agent should only open the file without the `Locomotion` labels.
     * The agent recognized that the column names matched those of the OPPORTUNITY dataset and tried to validate its results against taht dataset. When I told it not to, it didn't. 
     * Agent recognized that it should consider the proportion of the time that the person spends in each position, given that I told it they are performing activities of daily living. Also considered that it should have reasonable transitions (i.e. Lie to Stand should transition through Sit)
+    * Agent intuited that walking should involve angular momentum of the shoe sensors, that lying should be detectable by back sensor orientation, and that the knee sensor should be useful for detecting sitting and standing.
+    * Agent wrote work to python script `classify_posture.py`. Notes section gives physical description that doesn't rely on Locomotion labels, but the assertion that "When sitting, the thigh rotates to ~90 horizontal, so the Y-axis gravity component drops to ~200-500 milli-g" could be based either on logic or data leakage. 
+    * Agent comes up with a series of cutoffs for each of the sensor signals, recognizing that it should look at sustained motion (e.g. walking over a period of 3 seconds) to avoid seeing stuff like fidgeting or brief foot adjustments. However, how it comes up with these cutoffs is not clear - it justifies the directionality of those cutoffs (e.g. that RKN^ Y-axis should be ~1000 when standing and significantly less than that when sitting, but doesn't explain where it gets the ~200-500 milli-g range from; asserts that high angular shoe momentum should indicate walking, but doesn't indicate where the 2000 cutoff comes from). 
+    * Came up with formula to calculate tilt which works when object is stationary - since we're using it to detect lying posture and not walking, this is probably fine. 
+    * Agent is simply forward-filling data to fill in missing values
+    * Final decision process is to first categorize each instant based on back angle, shoe angular velocity, and knee gravity component (priorty is Walk > Lie > Sit > Stand). Next it applies a temporal smoothing to minimize noise, and finally enforces a minimum duration of 5 seconds for lying down. The temporal smoothing and lying down are both intuitions it made that are reasonably supported by intuition. 
 * Summary: 
     * For the case of Locomotion, the agent constructed a clear, fairly accurate decision procedure that was well-supported by a physical explanation (with occasional misunderstandings). It required a general explanation of what the data it was receiving was, but correctly intuited implications of column names. In the simplest case (gross motor movement, only 4 categories), the agent constructed an accurate and interpretable decision process. 
     * For the case of low level activity, the agent correctly identified that it should focus on arm sensors, but provided a lot of spurious metrics and an unclear, incomplete, undefinitive decision process. Several more errors in its logic than in the Locomotion case. 
+
+# Automated Pipeline
+Next, I want to automate and generalize this pipeline. That will involve first creating the context prompt (i.e. what I created when I read through the documentation, pulled out the useful information, and specified that it needed a clear decision process) from the user query (e.g. "how much time does the subject spend walking?") and the documentation. 
+* Pipeline 1: How well does the agent do with just the low-level user query "how much time does the subject spend standing, walking, sitting, and lying down?" without any explanation of the documentation? 
+    * Claude Code gave me a printout of the time each subject spent in each position and an explanation of how it used the sensor data, but there was no generated code or clear decision process. Clearly the requirement for an explanation of each step is required to get the transparency we need. 
+    * CC categorized every timestep, some of which we don't have ground truth labels for, but the distribution of time it gave is in harmony with ground truth (it never predicted lower time spent in a category than what was actually observed). 
+    * Next step: see if we can do with just a prompt asking for an explainable decision process, not including context from the documentation.
+* Pipeline 2: This time I also asked the agent to explain its reasoning enough to be replicable.
+    * This time it gave a replicable decision process - need to verify that executing that gives the expected results. 
+    * It recognized this as the Opportunity dataset. I need to tell it to either only infer from the column names the interpretation of the values and not externally validate, or to rename the columns so that it can't so easily look them up. 
+    * Looked at the results from the last pipeline (need to make sure it's not cheating by looking at old work - move those to an archive folder that Claude Code doesn't have access to and tell it not look look there)s
+    * I wonder how much more accurate it could get if it only focused on accuracy instead of explainability. 
+    * The key failures are that it's identifying the Opportunity dataset and it's looking at previous pipelines. Before pivoting to writing an agent pipeline, see if I can get it to avoid identifying the dataset or looking at previous work. 
+* Pipeline 3: Same as pipeline 2, but adding the requirement to not check external sources for information about the dataset or to look at previous work.
+    * Agent returned that the task could not be completed because it needed either labels or a model to figure out from the sensors what the status was. 
+    * Agent correctly identified the types of labels, but didn't make any effort to use infer how to use those columns. 
+    * Now I need to see if, given the context I'd given it before with this exhortation not to use external sources, it can still render a decent decision process. 
+* Pipeline 4: Same as pipeline 3, but with all the context from prompt 3. 
+    * This time it gave me a sensible answer, similar to previous answers. Is the context making the difference? 
+* Pipeline 5: Rerunning pipeline 3 this time gave me an answer - non-determinism is a problem
+* Pipelines 6 and 7: Confirmed that CC has a tendency to kick the problem back to the user when it doesn't have context and is told not to validate against external datasets. It does try to cheat sometimes though. Switching to an OpenAI agent pipeline which won't have access to the file system. 

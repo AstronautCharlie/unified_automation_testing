@@ -1,0 +1,14 @@
+In the `dataset` folder, a parquet file called `ADL_no_label.parquet`. That file contains timeseries data of sensor readings taken while an individual performs a series of activities of daily living (ADL). The `MILLISEC` column indicates the time at which the sensor readings were taken. The `recording` column has values of the format SX-ADLY, where X and Y are numbers. The X value indicates the individual, and the Y value indicates the run number of the activities (each individual performs a number of runs of the same activities.
+
+Some of the sensor data (columns 2 to 134) comes from sensors that the individual wore on their body. The names of the columns indicate where on the body the sensor was worn. Abbreviations are used in the column names as follows: "RKN" means "right knee", "LUA" means "left upper arm", "LH" means "left hand", "RUA" means "right upper arm", "RWR" means "right wrist", "RUA" means "right upper arm", "LWR" means "left wrist", "RH" means "right hand". Note that some body parts have more than one sensor, differentiated by symbols ("^" and "_") in the column names. When this happens, that is because the two sensors are placed close together. 
+
+Some of the sensor data (columns 135-231) comes from sensors attached to objects. The name of the object to which the sensor is attached appears in the column name. Most of these sensors are accelerometers tracking acceleration in 3-dimensional space, but some are reed switches. The reed switches can report values either 0 or 1, and are intended to distinguish between three states (closed, half open, and fully open) for the object to which they are attached. 
+
+Some of the sensor data (columns 232 to 243) are location tags, which I believe indicate where in the space the individual is, but I'm not sure as the documentation on these fields is lacking. 
+
+Your assignment is as follows: 
+	1. Open `ADL_no_label.parquet` and read through all the columns to get a sense of the available data. At no point should you ever open any other .parquet files in the `dataset` folder. ONLY open the `ADL_no_label.parquet` file. 
+	2. Using only the sensor data, categorize whether the individual is standing, sitting, walking, or lying down at that moment in time. Use the labels 'Stand', 'Sit', 'Walk', 'Lie'. You can use any method you'd like - the goal is to reconstruct an accurate label. 
+	3. Give me a natural language explanation of your categorization process. I'm especially interested in a physical understanding.
+
+All code (including bash commands) written to accomplish this task should be written into the `prompt_8' folder for reproducibility. Any code executed must be recorded, even if it is a bash command.

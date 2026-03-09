@@ -2,7 +2,7 @@ import re
 import pandas as pd
 from pathlib import Path
 
-DATASET_DIR = Path(__file__).parent / "dataset"
+DATASET_DIR = Path(__file__).parent / "secrets"
 
 
 def parse_column_names(path: Path) -> list[str]:

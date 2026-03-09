@@ -265,7 +265,7 @@ LOCOMOTION_LABELS = [
 ]
 
 def load_all_adl() -> pd.DataFrame:
-    dataset_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dataset")
+    dataset_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "secrets")
     adl_files = sorted(
         f for f in os.listdir(dataset_dir)
         if "ADL" in f and f.endswith(".parquet")
@@ -280,7 +280,7 @@ def load_all_adl() -> pd.DataFrame:
     return pd.concat(dfs, ignore_index=True)
 
 def load_all_adl_no_label() -> pd.DataFrame: 
-    dataset_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dataset")
+    dataset_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "secrets")
     adl_files = sorted(
         f for f in os.listdir(dataset_dir)
         if "ADL" in f and f.endswith(".parquet")
